@@ -1,0 +1,77 @@
+load "medit"
+
+// Values for the problem
+real eps = 1e-6; 
+int n = 50;      
+
+// Domain Omega =  [0,1]^2
+mesh Th = square(n, n);
+fespace Vh(Th, P1); 
+Vh u, v, f;
+
+// PART 1
+Vh uEx = sin(pi*x)*sin(pi*y); 
+Vh f1 = 2*pi^2*sin(pi*x)*sin(pi*y); 
+
+// -Delta u = f
+solve Poisson(u, v) = 
+    int2d(Th)(dx(u)*dx(v) + dy(u)*dy(v)) 
+    - int2d(Th)(f1*v) 
+    + on(1, 2, 3, 4, u=0);
+
+// Errors
+real errL2 = sqrt(int2d(Th)((u - uEx)^2));
+real errH1 = sqrt(int2d(Th)((u - uEx)^2 + (dx(u) - dx(uEx))^2 + (dy(u) - dy(uEx))^2));
+
+cout << "Erreur L2 (p=2) : " << errL2 << endl;
+cout << "Erreur H1 (p=2) : " << errH1 << endl;
+plot(u, value=true, fill=true, dim=3, wait=true, cmm="Solution for p=2");
+
+// --- CONFIGURATION PARTIE 2 ---
+// On fixe f = 1
+f = 1.0; 
+
+// Valeurs de p à tester : 2, 3, 5, 10s
+real pVal = 3.0; 
+real epsReg = 1e-6; // Paramètre de régularisation epsilon 
+
+Vh uold = 0; // u à l'itération k
+
+// --- ALGORITHME DE PICARD ---
+// Résolution itérative
+for (int i = 0; i < 100; i++) {
+    // Définition du coefficient non linéaire a(u^k)
+    // a(u^k) = (epsilon + |grad(u^k)|^2)^((p-2)/2)
+    Vh a = (epsReg + dx(uold)^2 + dy(uold)^2)^((pVal - 2.0) / 2.0);
+
+    solve StepPicard(u, v) = 
+        int2d(Th)(a * (dx(u)*dx(v) + dy(u)*dy(v))) // Terme de diffusion
+        - int2d(Th)(f * v)                         // Terme source
+        + on(1, 2, 3, 4, u = 0);                   // Dirichlet 
+
+    // Vérification de la convergence
+    real error = sqrt(int2d(Th)((u - uold)^2));
+    uold = u; 
+    
+    if (error < 1e-6) {
+        cout << "Convergence p=" << pVal << " atteinte en " << i << " iterations." << endl;
+        break;
+    }
+}
+
+// --- VISUALISATION (COULEURS & 3D) ---
+// 1. La solution u (L'élévation) 
+plot(u, 
+    fill=true, 
+    dim=3, 
+    cmm="Solution u pour p = " + pVal, 
+    wait=true);
+
+// 2. La norme du gradient |grad u| 
+Vh gradAbs = sqrt(dx(u)^2 + dy(u)^2);
+plot(gradAbs, 
+    fill=true, 
+    dim=3, 
+    ColorScheme=4, // Palette Viridis (Bleu/Vert/Jaune)
+    cmm="Norme du gradient pour p = " + pVal, 
+    wait=true);
