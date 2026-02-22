@@ -27,6 +27,63 @@ cout << "Erreur L2 (p=2) : " << errL2 << endl;
 cout << "Erreur H1 (p=2) : " << errH1 << endl;
 plot(u, value=true, fill=true, dim=3, wait=true, cmm="Solution for p=2");
 
+// --- ETUDE DE CONVERGENCE EN h (QUESTION 5) ---
+// On raffine le maillage et on calcule les erreurs L2 et H1
+int[int] nList = [10, 20, 40, 80]; 
+
+cout << "---------------- Convergence en h (p=2) ----------------" << endl;
+cout << "n\t h\t\t errL2\t\t errH1\t\t ordreL2\t ordreH1" << endl;
+
+real prevH = -1.0;
+real prevErrL2 = -1.0;
+real prevErrH1 = -1.0;
+
+for (int k = 0; k < nList.n; k++) 
+{
+    int nConv = nList[k];
+    real h = 1.0 / nConv; // approx pour square(n,n)
+
+    mesh ThConv = square(nConv, nConv);
+    fespace VhConv(ThConv, P1);
+    VhConv uConv, vConv;
+
+    VhConv uExConv = sin(pi*x)*sin(pi*y);
+    VhConv f1Conv = 2*pi^2*sin(pi*x)*sin(pi*y);
+
+    // -Delta u = f
+    solve PoissonConv(uConv, vConv) = 
+        int2d(ThConv)(dx(uConv)*dx(vConv) + dy(uConv)*dy(vConv)) 
+        - int2d(ThConv)(f1Conv*vConv) 
+        + on(1, 2, 3, 4, uConv=0);
+
+    // Errors
+    real errL2Conv = sqrt(int2d(ThConv)((uConv - uExConv)^2));
+    real errH1Conv = sqrt(int2d(ThConv)((uConv - uExConv)^2 
+                    + (dx(uConv) - dx(uExConv))^2 
+                    + (dy(uConv) - dy(uExConv))^2));
+
+    // Ordres (si possible)
+    real ordreL2 = -1.0;
+    real ordreH1 = -1.0;
+
+    if (k > 0) 
+    {
+        ordreL2 = log(prevErrL2/errL2Conv) / log(prevH/h);
+        ordreH1 = log(prevErrH1/errH1Conv) / log(prevH/h);
+    }
+
+    cout << nConv << "\t " << h << "\t " << errL2Conv << "\t " << errH1Conv;
+    if (k > 0) 
+        cout << "\t " << ordreL2 << "\t " << ordreH1;
+    else 
+        cout << "\t " << "-" << "\t " << "-";
+    cout << endl;
+
+    prevH = h;
+    prevErrL2 = errL2Conv;
+    prevErrH1 = errH1Conv;
+}
+
 // --- CONFIGURATION PARTIE 2 ---
 // On fixe f = 1
 f = 1.0; 
