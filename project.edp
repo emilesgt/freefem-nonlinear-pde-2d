@@ -88,47 +88,61 @@ for (int k = 0; k < nList.n; k++)
 // On fixe f = 1
 f = 1.0; 
 
-// Valeurs de p à tester : 2, 3, 5, 10s
-real pVal = 3.0; 
 real epsReg = 1e-6; // Paramètre de régularisation epsilon 
+int maxIter = 200;
+real tol = 1e-6;
 
-Vh uold = 0; // u à l'itération k
+// Valeurs de p à tester : 2, 3, 5, 10s
+real[int] pList = [2.0, 3.0, 5.0, 10.0];
 
-// --- ALGORITHME DE PICARD ---
-// Résolution itérative
-for (int i = 0; i < 100; i++) {
-    // Définition du coefficient non linéaire a(u^k)
-    // a(u^k) = (epsilon + |grad(u^k)|^2)^((p-2)/2)
-    Vh a = (epsReg + dx(uold)^2 + dy(uold)^2)^((pVal - 2.0) / 2.0);
+for (int ip = 0; ip < pList.n; ip++) 
+{
+    real pVal = pList[ip];
+    cout << "---------------- Picard : p = " << pVal << " ----------------" << endl;
 
-    solve StepPicard(u, v) = 
-        int2d(Th)(a * (dx(u)*dx(v) + dy(u)*dy(v))) // Terme de diffusion
-        - int2d(Th)(f * v)                         // Terme source
-        + on(1, 2, 3, 4, u = 0);                   // Dirichlet 
+    Vh uold = 0; // u à l'itération k
+    u = 0;
 
-    // Vérification de la convergence
-    real error = sqrt(int2d(Th)((u - uold)^2));
-    uold = u; 
-    
-    if (error < 1e-6) {
-        cout << "Convergence p=" << pVal << " atteinte en " << i << " iterations." << endl;
-        break;
+    // --- ALGORITHME DE PICARD ---
+    // Résolution itérative
+    for (int i = 0; i < maxIter; i++) {
+        // Définition du coefficient non linéaire a(u^k)
+        // a(u^k) = (epsilon + |grad(u^k)|^2)^((p-2)/2)
+        Vh a = (epsReg + dx(uold)^2 + dy(uold)^2)^((pVal - 2.0) / 2.0);
+
+        solve StepPicard(u, v) =
+            int2d(Th)(a * (dx(u)*dx(v) + dy(u)*dy(v))) // Terme de diffusion
+            - int2d(Th)(f * v)                         // Terme source
+            + on(1, 2, 3, 4, u = 0);                   // Dirichlet
+
+        // Vérification de la convergence
+        real error = sqrt(int2d(Th)((u - uold)^2));
+        uold = u;
+
+        if (error < tol) {
+            cout << "Convergence p=" << pVal << " atteinte en " << i << " iterations." << endl;        
+            break;
+        }
+
+        if (i == maxIter-1) {
+            cout << "Attention : pas de convergence pour p=" << pVal << " en " << maxIter << " iterations." << endl;
+        }
     }
+
+    // --- VISUALISATION (COULEURS & 3D) ---
+    // 1. La solution u (L'élévation)
+    plot(u,
+        fill=true,
+        dim=3,
+        cmm="Solution u pour p = " + pVal,
+        wait=true);
+
+    // 2. La norme du gradient |grad u|
+    Vh gradAbs = sqrt(dx(u)^2 + dy(u)^2);
+    plot(gradAbs,
+        fill=true,
+        dim=3,
+        ColorScheme=4, // Palette Viridis (Bleu/Vert/Jaune)
+        cmm="Norme du gradient pour p = " + pVal, 
+        wait=true);
 }
-
-// --- VISUALISATION (COULEURS & 3D) ---
-// 1. La solution u (L'élévation) 
-plot(u, 
-    fill=true, 
-    dim=3, 
-    cmm="Solution u pour p = " + pVal, 
-    wait=true);
-
-// 2. La norme du gradient |grad u| 
-Vh gradAbs = sqrt(dx(u)^2 + dy(u)^2);
-plot(gradAbs, 
-    fill=true, 
-    dim=3, 
-    ColorScheme=4, // Palette Viridis (Bleu/Vert/Jaune)
-    cmm="Norme du gradient pour p = " + pVal, 
-    wait=true);
