@@ -105,6 +105,17 @@ for (int ip = 0; ip < pList.n; ip++)
 
     // --- ALGORITHME DE PICARD ---
     // Résolution itérative
+
+    // Initialisation u^0 : solution du cas linéaire (p=2)
+    solve PoissonInit(uold, v) =
+        int2d(Th)(dx(uold)*dx(v) + dy(uold)*dy(v))
+        - int2d(Th)(f*v)
+        + on(1,2,3,4, uold=0);
+
+    u = uold;
+
+    real omega = 0.7; // Relaxation (damping)
+
     for (int i = 0; i < maxIter; i++) {
         // Définition du coefficient non linéaire a(u^k)
         // a(u^k) = (epsilon + |grad(u^k)|^2)^((p-2)/2)
@@ -115,8 +126,18 @@ for (int ip = 0; ip < pList.n; ip++)
             - int2d(Th)(f * v)                         // Terme source
             + on(1, 2, 3, 4, u = 0);                   // Dirichlet
 
+        // Relaxation (damping) : u^{k+1} <- (1-omega)u^k + omega*u^{k+1}
+        u = (1.0 - omega)*uold + omega*u;
+
         // Vérification de la convergence
         real error = sqrt(int2d(Th)((u - uold)^2));
+
+        // Résidu (test v = u - uold)
+        Vh w = u - uold;
+        real residu = abs( int2d(Th)( a*(dx(u)*dx(w) + dy(u)*dy(w)) ) - int2d(Th)( f*w ) );
+
+        cout << "p=" << pVal << "  iter=" << i << "  error=" << error << "  residu=" << residu << endl;
+
         uold = u;
 
         if (error < tol) {
