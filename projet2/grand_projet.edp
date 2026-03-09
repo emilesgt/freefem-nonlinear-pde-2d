@@ -1,0 +1,38 @@
+// -*- C++ -*-
+
+// load "UMFPACK64"
+load "msh3"
+load "medit"
+load "iovtk"
+
+int[int] fforder2 =[1,1,1,1];
+
+
+
+// cylinder  
+real Diam = 2.;
+real R    = Diam/2.;
+real L = 20.*R;  // Longueur de la veine complete 
+
+real r = R/2.; //   Stenos 
+real l = 3.*R;  //  longueur avant la Stenos 
+
+
+int nn = 10; // Pour le maillage du rectangle avant deformation 
+mesh Th=square(10*nn,nn,[L*x,y*Diam]);
+
+real xs = 3.*R; real xg = 2.*R; real xd = xg +l;
+
+func Deformation = 
+   ( ((R-y)/R)*(R- ( r + (R-r)* sin( (x-xs)*( 3.*pi)/(4.*l) )* sin( (x-xs)*( 3.*pi)/(4.*l) ) ) ) * ( (x>xs)&&(x<=xd) ))
+  +( ((R-y)/R)*(R- ( r + (R-r)* sin( (x-xs)*(-3.*pi)/(2.*l) )* sin( (x-xs)*(-3.*pi)/(2.*l) ) ) ) * ( (x>xg)&&(x<=xs) ))
+  +( ((R-y)/R)*(R- ( R                                                                       ) ) * ( (x>xd)||(x<xg)  ))
+;
+// Entree = 4, Sortie =2, Bas = 1 et haut = 3 
+
+Th=movemesh(Th,[x,y+Deformation]);
+mesh Thref = Th;
+plot(Th); exit(0);
+
+//savevtk("Domaine-Stenos-"+r+".vtu",Th, [0,0,0], 
+                             //order = fforder2, dataname =" Dom ", bin = true );
